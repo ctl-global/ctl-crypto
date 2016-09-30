@@ -108,7 +108,7 @@ namespace Ctl.Crypto
         /// <param name="publicKeys">A bundle of public keys, used to verify digital signatures. If specified, an exception will be thrown if a signature does not exist.</param>
         /// <param name="secretKeys">A bundle of secret keys, used to decrypt the stream.</param>
         /// <param name="secretKeyPassword">A password to decrypt the secret key.</param>
-        public static void Decrypt(Stream inputStream, Stream outputStream, PgpPublicKeyRingBundle publicKeys, PgpSecretKeyRingBundle secretKeys, string secretKeyPassword)
+        public static void Decrypt(Stream inputStream, Stream outputStream, PgpPublicKeyRingBundle publicKeys, PgpSecretKeyRingBundle secretKeys, string secretKeyPassword, bool requireVerification)
         {
             // this is all just tree traversal, going through a PGP object.
             // -root
@@ -139,12 +139,12 @@ namespace Ctl.Crypto
 
             var secretData = (from eo in enc.GetEncryptedDataObjects().OfType<PgpPublicKeyEncryptedData>()
                               let key = secretKeys.GetSecretKey(eo.KeyId)
-                              where key != null
+                              where key != null 
                               select new
                               {
                                   EncryptedData = eo,
                                   SecretKey = key
-                              }).SingleOrDefault();
+                              }).FirstOrDefault();
 
             if (secretData == null)
             {
@@ -240,11 +240,11 @@ namespace Ctl.Crypto
             }
             else
             {
-                if (publicKeys != null)
+                if (publicKeys != null && requireVerification)
                 {
                     throw new Exception("Message does not contain a signature to verify.");
                 }
-
+                
                 ld.GetInputStream().CopyTo(outputStream);
 
                 // verify integrity, if possible.
